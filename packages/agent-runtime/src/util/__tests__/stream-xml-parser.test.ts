@@ -218,5 +218,55 @@ Thinking about the task...
       expect(allToolCalls).toHaveLength(1)
       expect(allToolCalls[0].toolName).toBe('x')
     })
+
+    it('should extract a loose XML tool call inside <tool_call>', () => {
+      const state = createStreamParserState()
+      const chunk = `<tool_call>
+<function=read_files>
+<parameter=paths>
+["src/components/common/lang-switch.vue"]
+</tool_call>`
+
+      const result = parseStreamChunk(chunk, state)
+
+      expect(result.filteredText).toBe('')
+      expect(result.toolCalls).toHaveLength(1)
+      expect(result.toolCalls[0].toolName).toBe('read_files')
+      expect(result.toolCalls[0].input).toEqual({ paths: ['src/components/common/lang-switch.vue'] })
+    })
+
+    it('should extract multiple parameters in loose XML tool call', () => {
+      const state = createStreamParserState()
+      const chunk = `<tool_call>
+<function=write_file>
+<parameter=path>
+"src/components/common/lang-switch.vue"
+<parameter=content>
+export default { hello: 'world' }
+</tool_call>`
+
+      const result = parseStreamChunk(chunk, state)
+
+      expect(result.filteredText).toBe('')
+      expect(result.toolCalls).toHaveLength(1)
+      expect(result.toolCalls[0].toolName).toBe('write_file')
+      expect(result.toolCalls[0].input).toEqual({
+        path: 'src/components/common/lang-switch.vue',
+        content: "export default { hello: 'world' }",
+      })
+    })
+
+    it('should handle tool_call boundaries splitting across chunks', () => {
+      const state = createStreamParserState()
+      
+      const res1 = parseStreamChunk('Before text\n<tool', state)
+      expect(res1.filteredText).toBe('Before text\n')
+      expect(res1.toolCalls).toEqual([])
+
+      const res2 = parseStreamChunk('_call>\n<function=x>\n</tool_call>\nAfter text', state)
+      expect(res2.filteredText).toBe('\nAfter text')
+      expect(res2.toolCalls).toHaveLength(1)
+      expect(res2.toolCalls[0].toolName).toBe('x')
+    })
   })
 })

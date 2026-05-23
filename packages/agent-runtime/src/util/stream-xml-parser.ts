@@ -10,10 +10,6 @@ import {
   toolXmlName,
 } from '@codebuff/common/tools/constants'
 
-// Use flexible tag matching without requiring specific newlines
-const startToolTag = `<${toolXmlName}>`
-const endToolTag = `</${toolXmlName}>`
-
 export type ParsedToolCall = {
   toolName: string
   input: Record<string, unknown>
@@ -67,8 +63,28 @@ export function parseStreamChunk(
 
   while (text.length > 0) {
     if (state.insideToolCall) {
-      // We're inside a tool call, look for the end tag
-      const endIndex = text.indexOf(endToolTag)
+      // We're inside a tool call, look for the end tag (either </codebuff_tool_call> or </tool_call>)
+      let endIndex = -1
+      let endTagLength = 0
+
+      const idx1 = text.indexOf('</codebuff_tool_call>')
+      const idx2 = text.indexOf('</tool_call>')
+
+      if (idx1 !== -1 && idx2 !== -1) {
+        if (idx1 < idx2) {
+          endIndex = idx1
+          endTagLength = '</codebuff_tool_call>'.length
+        } else {
+          endIndex = idx2
+          endTagLength = '</tool_call>'.length
+        }
+      } else if (idx1 !== -1) {
+        endIndex = idx1
+        endTagLength = '</codebuff_tool_call>'.length
+      } else if (idx2 !== -1) {
+        endIndex = idx2
+        endTagLength = '</tool_call>'.length
+      }
 
       if (endIndex !== -1) {
         // Found end tag - extract the content and parse it
@@ -78,7 +94,7 @@ export function parseStreamChunk(
           toolCalls.push(parsedToolCall)
         }
 
-        text = text.slice(endIndex + endToolTag.length)
+        text = text.slice(endIndex + endTagLength)
         state.insideToolCall = false
       } else {
         // No end tag yet - buffer all content until we find the end tag
@@ -86,17 +102,45 @@ export function parseStreamChunk(
         text = ''
       }
     } else {
-      // We're outside a tool call, look for start tag
-      const startIndex = text.indexOf(startToolTag)
+      // We're outside a tool call, look for start tag (either <codebuff_tool_call> or <tool_call>)
+      let startIndex = -1
+      let startTagLength = 0
+      let matchedStartTag = ''
+
+      const idx1 = text.indexOf('<codebuff_tool_call>')
+      const idx2 = text.indexOf('<tool_call>')
+
+      if (idx1 !== -1 && idx2 !== -1) {
+        if (idx1 < idx2) {
+          startIndex = idx1
+          startTagLength = '<codebuff_tool_call>'.length
+          matchedStartTag = '<codebuff_tool_call>'
+        } else {
+          startIndex = idx2
+          startTagLength = '<tool_call>'.length
+          matchedStartTag = '<tool_call>'
+        }
+      } else if (idx1 !== -1) {
+        startIndex = idx1
+        startTagLength = '<codebuff_tool_call>'.length
+        matchedStartTag = '<codebuff_tool_call>'
+      } else if (idx2 !== -1) {
+        startIndex = idx2
+        startTagLength = '<tool_call>'.length
+        matchedStartTag = '<tool_call>'
+      }
 
       if (startIndex !== -1) {
         // Found start tag - emit text before it, then enter tool call
         filteredText += text.slice(0, startIndex)
-        text = text.slice(startIndex + startToolTag.length)
+        text = text.slice(startIndex + startTagLength)
         state.insideToolCall = true
       } else {
-        // No start tag - check if we might have a partial start tag
-        const partialStart = findPartialTagMatch(text, startToolTag)
+        // No start tag - check if we might have a partial start tag for either pattern
+        const partial1 = findPartialTagMatch(text, '<codebuff_tool_call>')
+        const partial2 = findPartialTagMatch(text, '<tool_call>')
+        const partialStart = Math.max(partial1, partial2)
+
         if (partialStart > 0) {
           // Emit everything except the partial tag, buffer the partial
           filteredText += text.slice(0, -partialStart)
@@ -138,9 +182,55 @@ function parseToolCallContent(content: string): ParsedToolCall | null {
 
     return { toolName, input }
   } catch {
-    // Invalid JSON - skip
+    // JSON 解析失败，尝试使用松散 XML 格式解析
+    return parseLooseToolCall(trimmed)
+  }
+}
+
+/**
+ * 尝试以松散 XML 格式解析大模型降级输出的工具调用。
+ * 支持以下伪 XML 格式：
+ * <function=read_files>
+ * <parameter=paths>
+ * ["src/components/common/lang-switch.vue"]
+ */
+function parseLooseToolCall(content: string): ParsedToolCall | null {
+  // 1. 提取函数名。支持: <function=read_files> 或 <function="read_files"> 等
+  const funcMatch = content.match(/<function=["']?([\w\-]+)["']?>/i)
+  if (!funcMatch) {
     return null
   }
+  const toolName = funcMatch[1]
+
+  // 2. 提取所有的参数
+  const paramRegex = /<parameter=["']?([\w\-]+)["']?>/gi
+  const matches = Array.from(content.matchAll(paramRegex))
+  const input: Record<string, unknown> = {}
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i]
+    const paramName = match[1]
+    const startIdx = match.index! + match[0].length
+
+    // 参数值的结束位置是下一个参数标签的起点，或者是内容的末尾
+    const endIdx = (i + 1 < matches.length) ? matches[i + 1].index! : content.length
+    let paramValStr = content.slice(startIdx, endIdx).trim()
+
+    // 清理可能存在的闭合标签（比如 </parameter> 等）
+    paramValStr = paramValStr.replace(/<\/parameter\s*>/i, '').trim()
+
+    // 尝试将其解析为 JSON，如果是个对象、数组、布尔或数字，这能极大地恢复结构
+    let parsedVal: unknown = paramValStr
+    try {
+      parsedVal = JSON.parse(paramValStr)
+    } catch {
+      // 如果解析失败，说明可能是普通未加引号的纯文本，保持原样
+    }
+
+    input[paramName] = parsedVal
+  }
+
+  return { toolName, input }
 }
 
 /**
