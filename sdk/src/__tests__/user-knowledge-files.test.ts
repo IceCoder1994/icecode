@@ -1,3 +1,5 @@
+import nodePath from 'path'
+
 import { createMockFs } from '@codebuff/common/testing/mocks/filesystem'
 import { createMockLogger } from '@codebuff/common/testing/mocks/logger'
 import { describe, it, expect } from 'bun:test'
@@ -25,32 +27,11 @@ describe('loadUserKnowledgeFiles', () => {
     expect(Object.keys(result)).toHaveLength(0)
   })
 
-  it('should load ~/.knowledge.md when it exists', async () => {
-    const mockFs = createMockFs({
-      readdirImpl: async () => ['.knowledge.md', '.bashrc'],
-      readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.knowledge.md') {
-          return '# My user knowledge'
-        }
-        throw new Error('File not found')
-      },
-    })
-    const mockLogger = createMockLogger()
-
-    const result = await loadUserKnowledgeFiles({
-      fs: mockFs,
-      logger: mockLogger,
-      homeDir: MOCK_HOME,
-    })
-
-    expect(result).toEqual({ '~/.knowledge.md': '# My user knowledge' })
-  })
-
-  it('should load ~/.AGENTS.md when ~/.knowledge.md does not exist', async () => {
+  it('should load ~/.AGENTS.md when it exists', async () => {
     const mockFs = createMockFs({
       readdirImpl: async () => ['.AGENTS.md', '.bashrc'],
       readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.AGENTS.md') {
+        if (path === nodePath.join(MOCK_HOME, '.AGENTS.md')) {
           return '# Agents config'
         }
         throw new Error('File not found')
@@ -67,11 +48,11 @@ describe('loadUserKnowledgeFiles', () => {
     expect(result).toEqual({ '~/.AGENTS.md': '# Agents config' })
   })
 
-  it('should load ~/.CLAUDE.md when neither knowledge.md nor AGENTS.md exist', async () => {
+  it('should load ~/.CLAUDE.md when AGENTS.md does not exist', async () => {
     const mockFs = createMockFs({
       readdirImpl: async () => ['.CLAUDE.md', '.bashrc'],
       readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.CLAUDE.md') {
+        if (path === nodePath.join(MOCK_HOME, '.CLAUDE.md')) {
           return '# Claude instructions'
         }
         throw new Error('File not found')
@@ -88,38 +69,14 @@ describe('loadUserKnowledgeFiles', () => {
     expect(result).toEqual({ '~/.CLAUDE.md': '# Claude instructions' })
   })
 
-  it('should prefer knowledge.md over AGENTS.md when both exist', async () => {
-    const mockFs = createMockFs({
-      readdirImpl: async () => ['.AGENTS.md', '.knowledge.md', '.bashrc'],
-      readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.knowledge.md') {
-          return '# Knowledge content'
-        }
-        if (path === '/mock/home/.AGENTS.md') {
-          return '# Agents content'
-        }
-        throw new Error('File not found')
-      },
-    })
-    const mockLogger = createMockLogger()
-
-    const result = await loadUserKnowledgeFiles({
-      fs: mockFs,
-      logger: mockLogger,
-      homeDir: MOCK_HOME,
-    })
-
-    expect(result).toEqual({ '~/.knowledge.md': '# Knowledge content' })
-  })
-
   it('should prefer AGENTS.md over CLAUDE.md when both exist', async () => {
     const mockFs = createMockFs({
       readdirImpl: async () => ['.CLAUDE.md', '.AGENTS.md'],
       readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.AGENTS.md') {
+        if (path === nodePath.join(MOCK_HOME, '.AGENTS.md')) {
           return '# Agents content'
         }
-        if (path === '/mock/home/.CLAUDE.md') {
+        if (path === nodePath.join(MOCK_HOME, '.CLAUDE.md')) {
           return '# Claude content'
         }
         throw new Error('File not found')
@@ -138,20 +95,12 @@ describe('loadUserKnowledgeFiles', () => {
 
   it('should only return one knowledge file (highest priority)', async () => {
     const mockFs = createMockFs({
-      readdirImpl: async () => [
-        '.knowledge.md',
-        '.AGENTS.md',
-        '.CLAUDE.md',
-        '.bashrc',
-      ],
+      readdirImpl: async () => ['.AGENTS.md', '.CLAUDE.md', '.bashrc'],
       readFileImpl: async (path: string) => {
-        if (path === '/mock/home/.knowledge.md') {
-          return '# Knowledge'
-        }
-        if (path === '/mock/home/.AGENTS.md') {
+        if (path === nodePath.join(MOCK_HOME, '.AGENTS.md')) {
           return '# Agents'
         }
-        if (path === '/mock/home/.CLAUDE.md') {
+        if (path === nodePath.join(MOCK_HOME, '.CLAUDE.md')) {
           return '# Claude'
         }
         throw new Error('File not found')
@@ -166,37 +115,15 @@ describe('loadUserKnowledgeFiles', () => {
     })
 
     expect(Object.keys(result)).toHaveLength(1)
-    expect(result['~/.knowledge.md']).toBe('# Knowledge')
+    expect(result['~/.AGENTS.md']).toBe('# Agents')
   })
 
   describe('case-insensitive matching', () => {
-    it('should find ~/.KNOWLEDGE.md (uppercase) case-insensitively', async () => {
-      const mockFs = createMockFs({
-        readdirImpl: async () => ['.KNOWLEDGE.md', '.bashrc', '.gitconfig'],
-        readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.KNOWLEDGE.md') {
-            return '# User knowledge (uppercase)'
-          }
-          throw new Error('File not found')
-        },
-      })
-      const mockLogger = createMockLogger()
-
-      const result = await loadUserKnowledgeFiles({
-        fs: mockFs,
-        logger: mockLogger,
-        homeDir: MOCK_HOME,
-      })
-
-      expect(Object.keys(result)).toHaveLength(1)
-      expect(result['~/.KNOWLEDGE.md']).toBe('# User knowledge (uppercase)')
-    })
-
     it('should find ~/.agents.md (lowercase) case-insensitively', async () => {
       const mockFs = createMockFs({
         readdirImpl: async () => ['.agents.md', '.bashrc'],
         readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.agents.md') {
+          if (path === nodePath.join(MOCK_HOME, '.agents.md')) {
             return '# Agents file (lowercase)'
           }
           throw new Error('File not found')
@@ -218,7 +145,7 @@ describe('loadUserKnowledgeFiles', () => {
       const mockFs = createMockFs({
         readdirImpl: async () => ['.claude.md', '.bashrc'],
         readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.claude.md') {
+          if (path === nodePath.join(MOCK_HOME, '.claude.md')) {
             return '# Claude (lowercase)'
           }
           throw new Error('File not found')
@@ -236,58 +163,11 @@ describe('loadUserKnowledgeFiles', () => {
       expect(result['~/.claude.md']).toBe('# Claude (lowercase)')
     })
 
-    it('should find ~/.Knowledge.md (mixed case) case-insensitively', async () => {
-      const mockFs = createMockFs({
-        readdirImpl: async () => ['.Knowledge.md', '.bashrc'],
-        readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.Knowledge.md') {
-            return '# Mixed case'
-          }
-          throw new Error('File not found')
-        },
-      })
-      const mockLogger = createMockLogger()
-
-      const result = await loadUserKnowledgeFiles({
-        fs: mockFs,
-        logger: mockLogger,
-        homeDir: MOCK_HOME,
-      })
-
-      expect(Object.keys(result)).toHaveLength(1)
-      expect(result['~/.Knowledge.md']).toBe('# Mixed case')
-    })
-
-    it('should prioritize knowledge.md over AGENTS.md regardless of case', async () => {
-      const mockFs = createMockFs({
-        readdirImpl: async () => ['.AGENTS.md', '.Knowledge.md', '.bashrc'],
-        readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.Knowledge.md') {
-            return '# Knowledge content'
-          }
-          if (path === '/mock/home/.AGENTS.md') {
-            return '# Agents content'
-          }
-          throw new Error('File not found')
-        },
-      })
-      const mockLogger = createMockLogger()
-
-      const result = await loadUserKnowledgeFiles({
-        fs: mockFs,
-        logger: mockLogger,
-        homeDir: MOCK_HOME,
-      })
-
-      expect(Object.keys(result)).toHaveLength(1)
-      expect(result['~/.Knowledge.md']).toBe('# Knowledge content')
-    })
-
     it('should preserve the original filename case in the key', async () => {
       const mockFs = createMockFs({
-        readdirImpl: async () => ['.KNOWLEDGE.MD', '.bashrc'],
+        readdirImpl: async () => ['.AGENTS.MD', '.bashrc'],
         readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.KNOWLEDGE.MD') {
+          if (path === nodePath.join(MOCK_HOME, '.AGENTS.MD')) {
             return '# All caps'
           }
           throw new Error('File not found')
@@ -301,8 +181,7 @@ describe('loadUserKnowledgeFiles', () => {
         homeDir: MOCK_HOME,
       })
 
-      // The key should preserve the original case
-      expect(Object.keys(result)[0]).toBe('~/.KNOWLEDGE.MD')
+      expect(Object.keys(result)[0]).toBe('~/.AGENTS.MD')
     })
   })
 
@@ -327,13 +206,13 @@ describe('loadUserKnowledgeFiles', () => {
 
     it('should handle readFile failure gracefully and try next priority', async () => {
       const mockFs = createMockFs({
-        readdirImpl: async () => ['.knowledge.md', '.AGENTS.md'],
+        readdirImpl: async () => ['.AGENTS.md', '.CLAUDE.md'],
         readFileImpl: async (path: string) => {
-          if (path === '/mock/home/.knowledge.md') {
+          if (path === nodePath.join(MOCK_HOME, '.AGENTS.md')) {
             throw new Error('Read error')
           }
-          if (path === '/mock/home/.AGENTS.md') {
-            return '# Agents fallback'
+          if (path === nodePath.join(MOCK_HOME, '.CLAUDE.md')) {
+            return '# Claude fallback'
           }
           throw new Error('File not found')
         },
@@ -346,8 +225,7 @@ describe('loadUserKnowledgeFiles', () => {
         homeDir: MOCK_HOME,
       })
 
-      // Should fall back to AGENTS.md when knowledge.md fails to read
-      expect(result).toEqual({ '~/.AGENTS.md': '# Agents fallback' })
+      expect(result).toEqual({ '~/.CLAUDE.md': '# Claude fallback' })
     })
   })
 })

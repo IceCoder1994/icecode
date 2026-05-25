@@ -44,7 +44,7 @@ import type * as fsType from 'fs'
 
 /**
  * Given a list of candidate file paths, selects the one with highest priority.
- * Priority order: knowledge.md > AGENTS.md > CLAUDE.md (case-insensitive).
+ * Priority order: AGENTS.md > CLAUDE.md (case-insensitive).
  * Returns undefined if no knowledge files are found.
  * @internal Exported for testing
  */
@@ -341,9 +341,9 @@ async function discoverProjectPaths(params: {
 
 /**
  * Loads user knowledge files from the home directory.
- * Checks for ~/.knowledge.md, ~/.AGENTS.md, and ~/.CLAUDE.md with priority fallback.
- * Matching is case-insensitive (e.g., ~/.KNOWLEDGE.md will match).
- * Returns a record with the tilde-prefixed path as key (e.g., "~/.knowledge.md").
+ * Checks for ~/.AGENTS.md and ~/.CLAUDE.md with priority fallback.
+ * Matching is case-insensitive (e.g., ~/.AGENTS.md or ~/.agents.md will match).
+ * Returns a record with the tilde-prefixed path as key (e.g., "~/.AGENTS.md").
  * @internal Exported for testing
  */
 export async function loadUserKnowledgeFiles(params: {
@@ -380,7 +380,7 @@ export async function loadUserKnowledgeFiles(params: {
     }
   }
 
-  // Select highest priority file (priority: knowledge.md > AGENTS.md > CLAUDE.md)
+  // Select highest priority file (priority: AGENTS.md > CLAUDE.md)
   for (const priorityName of KNOWLEDGE_FILE_NAMES_LOWERCASE) {
     const actualFileName = candidates.get(priorityName)
     if (actualFileName) {
@@ -406,7 +406,7 @@ export async function loadUserKnowledgeFiles(params: {
 
 /**
  * Selects knowledge files from a list of file paths with fallback logic.
- * For each directory, checks for knowledge.md first, then AGENTS.md, then CLAUDE.md.
+ * For each directory, checks for AGENTS.md first, then CLAUDE.md.
  * @internal Exported for testing
  */
 export function selectKnowledgeFilePaths(allFilePaths: string[]): string[] {
@@ -437,7 +437,7 @@ export function selectKnowledgeFilePaths(allFilePaths: string[]): string[] {
 
 /**
  * Auto-derives knowledge files from project files if knowledgeFiles is undefined.
- * Implements fallback priority: knowledge.md > AGENTS.md > CLAUDE.md per directory.
+ * Implements fallback priority: AGENTS.md > CLAUDE.md per directory.
  */
 function deriveKnowledgeFiles(
   projectFiles: Record<string, string>,

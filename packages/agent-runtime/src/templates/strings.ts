@@ -120,7 +120,7 @@ export async function formatPrompt(
           Object.entries(fileContext.knowledgeFiles)
             .filter(([filePath]) => {
               const lowerPath = filePath.toLowerCase()
-              // Root-level knowledge files only (knowledge.md, AGENTS.md, CLAUDE.md)
+              // Root-level knowledge files only (AGENTS.md, CLAUDE.md)
               return KNOWLEDGE_FILE_NAMES_LOWERCASE.includes(lowerPath)
             })
             .map(([path, content]) => [path, content.trim()]),

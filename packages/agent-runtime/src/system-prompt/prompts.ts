@@ -14,13 +14,13 @@ import type { ProjectFileContext } from '@codebuff/common/util/file'
 export const knowledgeFilesPrompt = `
 # Knowledge files
 
-Knowledge files are your guide to the project. Knowledge files (files ending in "knowledge.md", "AGENTS.md", or "CLAUDE.md") within a directory capture knowledge about that portion of the codebase. They are another way to take notes in this "Memento"-style environment.
+Knowledge files are your guide to the project. Knowledge files (\`AGENTS.md\` or \`CLAUDE.md\`) within a directory capture knowledge about that portion of the codebase. They are another way to take notes in this "Memento"-style environment.
 
 Knowledge files were created by previous engineers working on the codebase, and they were given these same instructions. They contain key concepts or helpful tips that are not obvious from the code. e.g., let's say I want to use a package manager aside from the default. That is hard to find in the codebase and would therefore be an appropriate piece of information to add to a knowledge file.
 
 Each knowledge file should develop over time into a concise but rich repository of knowledge about the files within the directory, subdirectories, or the specific file it's associated with.
 
-There is a special class of user knowledge files that are stored in the user's home directory, e.g. \`~/.knowledge.md\`, \`~/.AGENTS.md\`, or \`~/.CLAUDE.md\`. These files are available to be read, but you cannot edit them because they are outside of the project directory. Do not try to edit them.
+There is a special class of user knowledge files that are stored in the user's home directory, e.g. \`~/.AGENTS.md\` or \`~/.CLAUDE.md\`. These files are available to be read, but you cannot edit them because they are outside of the project directory. Do not try to edit them.
 
 When should you update a knowledge file?
 - If the user gives broad advice to "always do x", that is a good candidate for updating a knowledge file with a concise rule to follow or bit of advice so you won't make the mistake again.
@@ -91,13 +91,13 @@ ${closeXml('write_file')}
 const initPrompt = `
 User has typed "init". Help them set up project knowledge files for better results.
 
-1. Ensure there is a \`knowledge.md\` file in the project root. If it does not exist, create it.
-2. Fill \`knowledge.md\` with concise, high-signal information about this repo:
+1. Ensure there is an \`AGENTS.md\` file in the project root. If it does not exist, create it.
+2. Fill \`AGENTS.md\` with concise, high-signal information about this repo:
    - What this project is and where key code lives
    - Commands to run (install/dev/test/lint/build) based on package/tooling files
    - Notable conventions, constraints, and "gotchas"
 3. Prefer reading existing docs (e.g. README, package.json, scripts) before writing.
-4. Use the \`write_file\` tool to create/update \`knowledge.md\`. Do not mention any deprecated configuration files.
+4. Use the \`write_file\` tool to create/update \`AGENTS.md\`. Do not mention deprecated configuration files such as \`knowledge.md\`.
 `.trim()
 
 export const additionalSystemPrompts = {

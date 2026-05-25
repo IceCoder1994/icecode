@@ -358,7 +358,7 @@ Please follow these steps to determine which files to request:
    - Configuration files
    - Utility functions
    - Documentation files
-   - Knowledge files (e.g. 'knowledge.md') which include important information about the project and any subdirectories
+   - Knowledge files (e.g. 'AGENTS.md' or 'CLAUDE.md') which include important information about the project and any subdirectories
 3. Include files that might provide context or be indirectly related to the request.
 4. Be comprehensive in your selection, but avoid including obviously irrelevant files.
 5. List a maximum of ${count} files. It's fine to list fewer if there are not great candidates.
@@ -416,7 +416,7 @@ Please follow these steps to determine which key files to request:
    - Key configuration files
    - Central utility functions
    - Documentation files
-   - Knowledge files (e.g. 'knowledge.md') which include important information about the project and any subdirectories
+   - Knowledge files (e.g. 'AGENTS.md' or 'CLAUDE.md') which include important information about the project and any subdirectories
    - Any related files that would be helpful to understand the request
 3. Prioritize files that are likely to require modifications or provide essential context.
 4. But be sure to include example code! I.e. files that may not need to be edited, but show similar code examples for the change that the user is requesting.

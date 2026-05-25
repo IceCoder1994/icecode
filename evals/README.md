@@ -124,7 +124,7 @@ evals/
 │
 ├── scaffolding.ts                # Test environment utilities
 ├── test-setup.ts                 # Environment configuration
-└── knowledge.md                  # Additional documentation
+└── AGENTS.md                     # Additional documentation
 ```
 
 ## Usage

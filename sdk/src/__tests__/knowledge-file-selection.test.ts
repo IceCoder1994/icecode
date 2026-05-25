@@ -9,10 +9,7 @@ import {
 
 describe('KNOWLEDGE_FILE_NAMES', () => {
   test('contains expected file names in priority order', () => {
-    expect(KNOWLEDGE_FILE_NAMES).toEqual([
-      'AGENTS.md',
-      'CLAUDE.md',
-    ])
+    expect(KNOWLEDGE_FILE_NAMES).toEqual(['AGENTS.md', 'CLAUDE.md'])
   })
 })
 
@@ -21,6 +18,13 @@ describe('isKnowledgeFile', () => {
     expect(isKnowledgeFile('knowledge.md')).toBe(false)
     expect(isKnowledgeFile('src/knowledge.md')).toBe(false)
     expect(isKnowledgeFile('KNOWLEDGE.MD')).toBe(false)
+  })
+
+  test('returns false for *.knowledge.md pattern', () => {
+    expect(isKnowledgeFile('authentication.knowledge.md')).toBe(false)
+    expect(isKnowledgeFile('src/api.knowledge.md')).toBe(false)
+    expect(isKnowledgeFile('docs/AUTH.KNOWLEDGE.MD')).toBe(false)
+    expect(isKnowledgeFile('foo.bar.knowledge.md')).toBe(false)
   })
 
   test('returns true for AGENTS.md', () => {
@@ -35,13 +39,6 @@ describe('isKnowledgeFile', () => {
     expect(isKnowledgeFile('Claude.MD')).toBe(true)
   })
 
-  test('returns true for *.knowledge.md pattern', () => {
-    expect(isKnowledgeFile('authentication.knowledge.md')).toBe(true)
-    expect(isKnowledgeFile('src/api.knowledge.md')).toBe(true)
-    expect(isKnowledgeFile('docs/AUTH.KNOWLEDGE.MD')).toBe(true)
-    expect(isKnowledgeFile('foo.bar.knowledge.md')).toBe(true)
-  })
-
   test('returns false for non-knowledge files', () => {
     expect(isKnowledgeFile('README.md')).toBe(false)
     expect(isKnowledgeFile('src/utils.ts')).toBe(false)
@@ -49,15 +46,13 @@ describe('isKnowledgeFile', () => {
     expect(isKnowledgeFile('agents.txt')).toBe(false)
   })
 
-  test('returns false for files with knowledge in name but no dot separator', () => {
-    // These should NOT match - stricter matching requires exact filename or .knowledge.md suffix
+  test('returns false for files with knowledge in name but no exact filename match', () => {
     expect(isKnowledgeFile('myknowledge.md')).toBe(false)
     expect(isKnowledgeFile('src/authknowledge.md')).toBe(false)
     expect(isKnowledgeFile('preknowledge.md')).toBe(false)
   })
 
   test('returns false for similar but non-matching patterns', () => {
-    // .agents.md and .claude.md patterns should NOT match
     expect(isKnowledgeFile('auth.agents.md')).toBe(false)
     expect(isKnowledgeFile('auth.claude.md')).toBe(false)
     expect(isKnowledgeFile('foo.AGENTS.md')).toBe(false)
@@ -115,6 +110,18 @@ describe('selectKnowledgeFilePaths', () => {
     const result = selectKnowledgeFilePaths(files)
 
     expect(result).toEqual(['src/CLAUDE.md'])
+  })
+
+  test('ignores knowledge.md and *.knowledge.md files', () => {
+    const files = [
+      'src/knowledge.md',
+      'src/topic.knowledge.md',
+      'src/AGENTS.md',
+      'docs/guide.knowledge.md',
+    ]
+    const result = selectKnowledgeFilePaths(files)
+
+    expect(result).toEqual(['src/AGENTS.md'])
   })
 
   test('prefers AGENTS.md over CLAUDE.md when both exist in same directory', () => {
@@ -201,10 +208,7 @@ describe('selectKnowledgeFilePaths', () => {
   })
 
   test('handles files with similar names but different extensions', () => {
-    const files = [
-      'src/AGENTS.md',
-      'src/agents.txt',
-    ]
+    const files = ['src/AGENTS.md', 'src/agents.txt']
     const result = selectKnowledgeFilePaths(files)
 
     expect(result).toEqual(['src/AGENTS.md'])
@@ -218,10 +222,7 @@ describe('selectKnowledgeFilePaths', () => {
   })
 
   test('handles file paths with special characters', () => {
-    const files = [
-      'my_project/AGENTS.md',
-      'my.project/CLAUDE.md',
-    ]
+    const files = ['my_project/AGENTS.md', 'my.project/CLAUDE.md']
     const result = selectKnowledgeFilePaths(files)
 
     expect(result).toHaveLength(2)
@@ -243,10 +244,7 @@ describe('selectKnowledgeFilePaths', () => {
   })
 
   test('handles paths correctly regardless of separator', () => {
-    const files = [
-      'src/components/AGENTS.md',
-      'lib/CLAUDE.md',
-    ]
+    const files = ['src/components/AGENTS.md', 'lib/CLAUDE.md']
     const result = selectKnowledgeFilePaths(files)
 
     expect(result).toHaveLength(2)
